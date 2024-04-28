@@ -4,40 +4,40 @@ format: html
 editor: visual
 ---
 
-```{r setup, include=FALSE}
+```{r}
+library(parsnip)
+library(recipes)
+library(dials)  # For tuning parameter objects
+library(workflows)  # For creating workflows
+library(rsample)  # For resampling if needed
+library(yardstick)  # For model metrics
+library(xgboost)
+library(parsnip)
+library(rsample)
+
 wine_data <- read.csv("wine-quality-white-and-red.csv")
 # Assuming the column that indicates the wine type is named 'type'
 
-red_wine <- wine_data[wine_data$type == "red", ]
-white_wine <- wine_data[wine_data$type == "white", ]
-
+red_wine <- wine_data[wine_data$type == "red", ] |>
+  select(-type)
+white_wine <- wine_data[wine_data$type == "white", ] |>
+  select(-type)
 
 normalize_min_max <- function(x) {
   return ((x - min(x)) / (max(x) - min(x)))
 }
-
-
 # Excluding the first and the last column
 red_feature_columns <- names(red_wine)[2:(ncol(red_wine) - 1)]
 
 white_feature_columns <-  names(white_wine)[2:(ncol(white_wine) - 1)]
 
-
 # Apply Min-Max Scaling
-
 # Apply min-max scaling to red wine features
 red_wine[red_feature_columns] <- lapply(red_wine[red_feature_columns], normalize_min_max)
 
 # Apply min-max scaling to white wine features
 white_wine[white_feature_columns] <- lapply(white_wine[white_feature_columns], normalize_min_max)
 
-# write.csv(white_wine,"white_wine.csv", row.names = FALSE)
-# write.csv(red_wine,"red_wine.csv", row.names = FALSE)
-
-# str(wine_quality)
-# 
-# # Summary statistics
-# summary(wine_quality)
 ```
 
 ```{r}
@@ -51,33 +51,49 @@ library(nnet)          # For multilayer perceptron
 
 # Split data into training and testing sets
 set.seed(123)
-training_index <- createDataPartition(wine_data$quality, p=0.75, list=FALSE)
-training_data <- wine_data[training_index, ]
-testing_data <- wine_data[-training_index, ]
-
-
-
+training_index <- createDataPartition(white_wine$quality, p=0.75, list= FALSE)
+training_data <- white_wine[training_index, ]
+testing_data <- white_wine[-training_index, ]
 ```
 
 ```{r fig.width= 6, fig.height= 6}
 
 # Training a Decision Tree model
 model_dt <- rpart(quality ~ ., data = training_data, method = "class")
-
 # Plot the tree
 plot(model_dt)
 text(model_dt)
+# Making predictions on the test data
+predictions_dt <- predict(model_dt, testing_data, type = "class")
+# Actual labels from the test data
+actual_labels_dt <- testing_data$quality
+
+# Calculate accuracy
+accuracy_dt <- mean(predictions_dt == actual_labels_dt)
+
+# Print the accuracy
+print(paste("Decision Tree Model Accuracy:", accuracy_dt))
+
 ```
 
 ```{r}
 
 # Training a Random Forest model
-model_rf <- randomForest(quality ~ ., data = training_data, ntree = 100)
-
+model_rf <- randomForest(quality ~ ., data = training_data, ntree = 1)
 # Viewing the importance of variables
 importance(model_rf)
 varImpPlot(model_rf)
 
+# Making predictions on the test data
+predictions_rf <- predict(model_rf, testing_data)
+
+# Actual labels from the test data
+actual_labels_rf <- testing_data$quality
+
+# Calculate accuracy
+accuracy_rf <- mean(predictions_rf == actual_labels_rf)
+# Print the accuracy
+print(paste("Random Forest Model Accuracy:", accuracy_rf))
 ```
 
 ```{r}
@@ -86,37 +102,96 @@ model_nb <- naiveBayes(quality ~ ., data = training_data)
 
 model_nb
 # Predictions
-# predictions_nb <- predict(model_nb, testing_data)
+predictions_nb <- predict(model_nb, testing_data)
+
+
+# Calculating the accuracy
+actual_labels <- testing_data$quality
+accuracy_nb <- mean(predictions_nb == actual_labels)
+
+# Printing the accuracy
+print(paste("Naive Bayes Model Accuracy:", accuracy_nb))
 
 ```
 
 ```{r}
+# Convert 'quality' to a factor for multinomial regression
+wine_data$quality <- as.factor(wine_data$quality)
 
-# Training a Multilayer Perceptron model
-model_mlp <- nnet(quality ~ ., 
-                  data = training_data,
-                  size = 10, 
-                  linout = TRUE,
-                  maxit = 200)
+# Split data
+set.seed(123)
+indexes <- createDataPartition(y = wine_data$quality, p = 0.75, list = FALSE)
+training_data <- wine_data[indexes, ]
+testing_data <- wine_data[-indexes, ]
 
-model_mlp
+# Fit multinomial logistic regression
+multinom_model <- multinom(quality ~ ., data = training_data)
 
-# Predictions
-# predictions_mlp <- predict(model_mlp, testing_data, type="class")
-
-```
-
-```{r}
-
-# Training an SVM model
-model_svm <- svm(quality ~ ., data = training_data, kernel = "radial")
-model_svm
-# Predictions
-# predictions_svm <- predict(model_svm, testing_data)
+# Predict and calculate accuracy
+predictions_multinom <- predict(multinom_model, testing_data)
+accuracy_multinom <- mean(predictions_multinom == testing_data$quality)
+print(paste("Multinomial Logistic Regression Model Accuracy:", accuracy_multinom))
 
 ```
 
 ```{r}
+# Load the data
+wine_data_2 <- read.csv("wine-quality-white-and-red.csv")
+
+wine_red <- wine_data_2[wine_data$type == "red",]
+
+wine_red <- wine_red |>
+  select(-type)
+# Set the seed for reproducibility
+set.seed(42)
+
+# Split the data into training and testing sets with a 75:25 ratio
+data_split <- initial_split(wine_red, prop = 0.75)
+
+# Extract the training and testing data
+train_data <- training(data_split)
+test_data <- testing(data_split)
 
 
+train_data$quality <- as.factor(train_data$quality)
+test_data$quality <- as.factor(test_data$quality)
+
+# Setup the recipe
+
+recipe <- recipe(quality ~ ., data = train_data) %>%
+  step_normalize(all_predictors())
+
+# Define the model with explicit settings
+xgb_spec <- boost_tree(
+  trees = 100,                # Number of trees
+  tree_depth = 16,             # Maximum depth of each tree
+  min_n = 10,                 # Minimum number of observations in nodes
+  loss_reduction = 1.0,       # Minimum loss reduction required for a further partition
+  sample_size = 0.75,         # Subsample ratio of the training instance
+  mtry = 3,                   # Number of variables randomly sampled as candidates at each split
+  learn_rate = 0.06           # Learning rate (shrinkage)
+) %>%
+  set_mode("classification") %>%
+  set_engine("xgboost")
+
+# Create the workflow
+xgb_workflow <- workflow() %>%
+  add_model(xgb_spec) %>%
+  add_recipe(recipe)
+
+# Fit the model
+xgb_fit <- fit(xgb_workflow, data = train_data)
+
+# Assuming xgb_fit is the fitted model workflow from previous steps
+
+class_predictions <- predict(xgb_fit, new_data = test_data, type = "class")
+
+# Bind the predictions with the true outcomes
+results <- bind_cols(test_data, predictions = class_predictions$.pred_class)
+
+# Calculate accuracy
+model_accuracy <- accuracy(results, truth = quality, estimate = predictions)
+
+# Print the accuracy
+print(model_accuracy)
 ```
