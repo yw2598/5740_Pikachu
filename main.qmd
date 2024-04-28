@@ -4,4 +4,119 @@ format: html
 editor: visual
 ---
 
-saasca
+```{r setup, include=FALSE}
+wine_data <- read.csv("wine-quality-white-and-red.csv")
+# Assuming the column that indicates the wine type is named 'type'
+
+red_wine <- wine_data[wine_data$type == "red", ]
+white_wine <- wine_data[wine_data$type == "white", ]
+
+
+normalize_min_max <- function(x) {
+  return ((x - min(x)) / (max(x) - min(x)))
+}
+
+
+# Excluding the first and the last column
+red_feature_columns <- names(red_wine)[2:(ncol(red_wine) - 1)]
+
+white_feature_columns <-  names(white_wine)[2:(ncol(white_wine) - 1)]
+
+
+# Apply Min-Max Scaling
+
+# Apply min-max scaling to red wine features
+red_wine[red_feature_columns] <- lapply(red_wine[red_feature_columns], normalize_min_max)
+
+# Apply min-max scaling to white wine features
+white_wine[white_feature_columns] <- lapply(white_wine[white_feature_columns], normalize_min_max)
+
+# write.csv(white_wine,"white_wine.csv", row.names = FALSE)
+# write.csv(red_wine,"red_wine.csv", row.names = FALSE)
+
+# str(wine_quality)
+# 
+# # Summary statistics
+# summary(wine_quality)
+```
+
+```{r}
+# Load necessary libraries
+library(caret)     # For machine learning algorithms
+library(randomForest)  # For Random Forest algorithm
+library(e1071)         # For SVM and Naive Bayes
+library(kknn)          # For k-Nearest Neighbors
+library(rpart)         # For decision trees
+library(nnet)          # For multilayer perceptron
+
+# Split data into training and testing sets
+set.seed(123)
+training_index <- createDataPartition(wine_data$quality, p=0.75, list=FALSE)
+training_data <- wine_data[training_index, ]
+testing_data <- wine_data[-training_index, ]
+
+
+
+```
+
+```{r fig.width= 6, fig.height= 6}
+
+# Training a Decision Tree model
+model_dt <- rpart(quality ~ ., data = training_data, method = "class")
+
+# Plot the tree
+plot(model_dt)
+text(model_dt)
+```
+
+```{r}
+
+# Training a Random Forest model
+model_rf <- randomForest(quality ~ ., data = training_data, ntree = 100)
+
+# Viewing the importance of variables
+importance(model_rf)
+varImpPlot(model_rf)
+
+```
+
+```{r}
+# Training a Naive Bayes model
+model_nb <- naiveBayes(quality ~ ., data = training_data)
+
+model_nb
+# Predictions
+# predictions_nb <- predict(model_nb, testing_data)
+
+```
+
+```{r}
+
+# Training a Multilayer Perceptron model
+model_mlp <- nnet(quality ~ ., 
+                  data = training_data,
+                  size = 10, 
+                  linout = TRUE,
+                  maxit = 200)
+
+model_mlp
+
+# Predictions
+# predictions_mlp <- predict(model_mlp, testing_data, type="class")
+
+```
+
+```{r}
+
+# Training an SVM model
+model_svm <- svm(quality ~ ., data = training_data, kernel = "radial")
+model_svm
+# Predictions
+# predictions_svm <- predict(model_svm, testing_data)
+
+```
+
+```{r}
+
+
+```
