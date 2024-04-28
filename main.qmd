@@ -57,7 +57,7 @@ testing_data <- white_wine[-training_index, ]
 ```
 
 ```{r fig.width= 6, fig.height= 6}
-
+set.seed(123)
 # Training a Decision Tree model
 model_dt <- rpart(quality ~ ., data = training_data, method = "class")
 # Plot the tree
@@ -77,7 +77,7 @@ print(paste("Decision Tree Model Accuracy:", accuracy_dt))
 ```
 
 ```{r}
-
+set.seed(123)
 # Load the randomForest library
 library(randomForest)
 
@@ -88,12 +88,13 @@ rf_model <- randomForest(quality ~ ., data = training_data, ntree = 3, mtry = 5,
 predictions <- predict(rf_model, testing_data)
 
 # Calculate the accuracy
-accuracy <- sum(predictions == testing_data$quality) / nrow(testing_data)
+accuracy_rf <- sum(predictions == testing_data$quality) / nrow(testing_data)
 print(paste("Accuracy of the Random Forest model:", accuracy))
 
 ```
 
 ```{r}
+set.seed(123)
 # Training a Naive Bayes model
 model_nb <- naiveBayes(quality ~ ., data = training_data)
 
@@ -140,7 +141,7 @@ wine_red <- wine_data_2[wine_data$type == "red",]
 wine_red <- wine_red |>
   select(-type)
 # Set the seed for reproducibility
-set.seed(42)
+set.seed(123)
 
 # Split the data into training and testing sets with a 75:25 ratio
 data_split <- initial_split(wine_red, prop = 0.75)

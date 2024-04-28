@@ -1,0 +1,24 @@
+---
+title: "Plots"
+format: html
+editor: visual
+---
+
+```{r}
+library(parsnip)
+library(recipes)
+library(dials)  # For tuning parameter objects
+library(workflows)  # For creating workflows
+library(rsample)  # For resampling if needed
+library(yardstick)  # For model metrics
+library(xgboost)
+library(parsnip)
+library(rsample)
+
+
+
+
+Model_Type <- c('Decision Tree','Naive Bayes','Random Forest','Multinomial Logistic Regression','XGBoost')
+
+Accuracy <- c(0.5343,0.4306,0.19526,)
+```
