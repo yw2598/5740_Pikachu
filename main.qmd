@@ -78,22 +78,19 @@ print(paste("Decision Tree Model Accuracy:", accuracy_dt))
 
 ```{r}
 
-# Training a Random Forest model
-model_rf <- randomForest(quality ~ ., data = training_data, ntree = 1)
-# Viewing the importance of variables
-importance(model_rf)
-varImpPlot(model_rf)
+# Load the randomForest library
+library(randomForest)
 
-# Making predictions on the test data
-predictions_rf <- predict(model_rf, testing_data)
+# Train the Random Forest model
+rf_model <- randomForest(quality ~ ., data = training_data, ntree = 3, mtry = 5, importance = TRUE)
 
-# Actual labels from the test data
-actual_labels_rf <- testing_data$quality
+# Predict on the testing data
+predictions <- predict(rf_model, testing_data)
 
-# Calculate accuracy
-accuracy_rf <- mean(predictions_rf == actual_labels_rf)
-# Print the accuracy
-print(paste("Random Forest Model Accuracy:", accuracy_rf))
+# Calculate the accuracy
+accuracy <- sum(predictions == testing_data$quality) / nrow(testing_data)
+print(paste("Accuracy of the Random Forest model:", accuracy))
+
 ```
 
 ```{r}
