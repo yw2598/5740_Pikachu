@@ -16,7 +16,7 @@ library(xgboost)
 # Load the data
 wine_data_2 <- read.csv("wine-quality-white-and-red.csv")
 
-wine_red <- wine_data_2[wine_data_2$type == "red",]
+wine_red <- wine_data_2[wine_data_2$type == "white",]
 
 wine_red <- wine_red |>
   select(-type)
@@ -67,11 +67,7 @@ class_predictions <- predict(xgb_fit, new_data = test_data, type = "class")
 # Bind the predictions with the true outcomes
 results <- bind_cols(test_data, predictions = class_predictions$.pred_class)
 
-# Calculate accuracy
-model_accuracy <- accuracy(results, truth = quality, estimate = predictions)
 
-# Print the accuracy
-print(model_accuracy)
 
 
 # Predictions with probabilities
@@ -154,7 +150,7 @@ auc_results <- setNames(numeric(length(class_levels)), class_levels)
 # Plot setup for multiple ROC curves
 plot_layout <- ggplot() +
   labs(x = "False Positive Rate", y = "True Positive Rate") +
-  ggtitle("ROC Curves by Class") +
+  ggtitle("ROC Curves by Class-White Wine") +
   theme_minimal()
 
 for (class in class_levels) {
@@ -197,57 +193,5 @@ print(paste("Macro-average AUC:", macro_average_auc))
 
 ```
 
-```{r}
-library(tidyverse)
-library(parsnip)
-library(recipes)
-library(yardstick)
-library(glmnet)
-library(rsample)
-library(workflows)
-library(tune)  
-
-set.seed(123)
-
-# Setup the recipe
-recipe <- recipe(quality ~ ., data = train_data) %>%
-  step_normalize(all_predictors())
-
-# Define the Lasso model
-lasso_spec <- logistic_reg(penalty = tune(), mixture = 1) %>% 
-  set_engine("glmnet")
-
-# Create the workflow
-lasso_workflow <- workflow() %>%
-  add_recipe(recipe) %>%
-  add_model(lasso_spec)
-
-# To choose a suitable penalty, typically cross-validation is used
-set.seed(234)  # for reproducibility in cross-validation
-cv_splits <- vfold_cv(train_data, v = 5)
-grid_vals <- grid_regular(penalty(range = c(-5, -1)), levels = 50)
-
-lasso_tuned <- tune_grid(
-  lasso_workflow,
-  resamples = cv_splits,
-  grid = grid_vals
-)
-
-best_penalty <- select_best(lasso_tuned, "roc_auc")
-
-# Update the model specification with the best penalty
-lasso_spec <- lasso_spec %>% finalize_parameters(best_penalty)
-
-# Fit the final model
-final_fit <- fit(lasso_workflow, data = train_data)
-
-# Predict on test data
-predictions <- predict(final_fit, test_data, type = "prob")
-
-# Evaluate model performance
-results <- bind_cols(test_data, predictions)
-roc_results <- roc_auc(results, truth = quality, .pred_positive)
-
-print(roc_results)
-
+```{}
 ```
