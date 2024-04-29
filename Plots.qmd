@@ -18,7 +18,48 @@ library(rsample)
 
 
 
-Model_Type <- c('Decision Tree','Naive Bayes','Random Forest','Multinomial Logistic Regression','XGBoost')
 
-Accuracy <- c(0.5343,0.4306,0.19526,)
+
+# Load necessary libraries
+library(ggplot2)
+library(dplyr)
+library(tibble)
+
+# Create a tibble with model types and their accuracies
+ModelAcc_w <- tibble(
+  Model_Type = c('Decision Tree', 'Naive Bayes', 'Random Forest', 'Multinomial Logistic Regression', 'XGBoost'),
+  Accuracy = c(0.5343, 0.4306, 0.687, 0.5278, 0.6626)
+)
+
+
+
+# Plot the accuracy of each model type 
+ModelAcc_w %>%
+  ggplot(aes(x = Model_Type, y = Accuracy, group = 1)) +  
+  geom_line() +  
+  geom_point() +  
+  theme_minimal() +  
+  geom_text(aes(label = Accuracy), vjust = 1, hjust = 1, color = "blue") +
+  labs(title = "Model Accuracy Comparison-White Wine", x = "Model Type", y = "Accuracy") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+
+# Create a tibble with model types and their accuracies
+ModelAcc_r <- tibble(
+  Model_Type = c('Decision Tree', 'Naive Bayes', 'Random Forest', 'Multinomial Logistic Regression', 'XGBoost'),
+  Accuracy = c(0.5815, 0.5063, 0.6867, 0.5914, 0.6925)
+)
+
+
+
+# Plot the accuracy of each model type 
+ModelAcc_r %>%
+  ggplot(aes(x = Model_Type, y = Accuracy, group = 1)) +  
+  geom_line() +  
+  geom_point() +  
+  theme_minimal() +  
+  geom_text(aes(label = Accuracy), vjust = 1, hjust = 1, color = "blue") +
+  labs(title = "Model Accuracy Comparison-Red Wine", x = "Model Type", y = "Accuracy") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+
+
 ```

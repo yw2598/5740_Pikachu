@@ -52,85 +52,230 @@ library(nnet)          # For multilayer perceptron
 # Split data into training and testing sets
 set.seed(123)
 training_index <- createDataPartition(white_wine$quality, p=0.75, list= FALSE)
-training_data <- white_wine[training_index, ]
-testing_data <- white_wine[-training_index, ]
+training_data_w <- white_wine[training_index, ]
+testing_data_w <- white_wine[-training_index, ]
+
+training_index <- createDataPartition(red_wine$quality, p=0.75, list= FALSE)
+training_data_r <- red_wine[training_index, ]
+testing_data_r <- red_wine[-training_index, ]
+
 ```
 
 ```{r fig.width= 6, fig.height= 6}
 set.seed(123)
 # Training a Decision Tree model
-model_dt <- rpart(quality ~ ., data = training_data, method = "class")
+model_dt_w <- rpart(quality ~ ., data = training_data_w, method = "class")
 # Plot the tree
-plot(model_dt)
-text(model_dt)
+plot(model_dt_w)
+text(model_dt_w)
 # Making predictions on the test data
-predictions_dt <- predict(model_dt, testing_data, type = "class")
+predictions_dt_w <- predict(model_dt_w, testing_data_w, type = "class")
 # Actual labels from the test data
-actual_labels_dt <- testing_data$quality
+actual_labels_dt_w <- testing_data_w$quality
 
 # Calculate accuracy
-accuracy_dt <- mean(predictions_dt == actual_labels_dt)
+accuracy_dt_w <- mean(predictions_dt_w == actual_labels_dt_w)
 
 # Print the accuracy
-print(paste("Decision Tree Model Accuracy:", accuracy_dt))
+print(paste("Decision Tree Model Accuracy:", accuracy_dt_w))
 
 ```
+```{r fig.width= 6, fig.height= 6}
+set.seed(123)
+# Training a Decision Tree model
+model_dt_r <- rpart(quality ~ ., data = training_data_r, method = "class")
+# Plot the tree
+plot(model_dt_r)
+text(model_dt_r)
+# Making predictions on the test data
+predictions_dt_r <- predict(model_dt_r, testing_data_r, type = "class")
+# Actual labels from the test data
+actual_labels_dt_r <- testing_data_r$quality
+
+# Calculate accuracy
+accuracy_dt_r <- mean(predictions_dt_r == actual_labels_dt_r)
+
+# Print the accuracy
+print(paste("Decision Tree Model Accuracy:", accuracy_dt_r))
+```
+
+
+
 
 ```{r}
 set.seed(123)
-# Load the randomForest library
-library(randomForest)
 
-# Train the Random Forest model
-rf_model <- randomForest(quality ~ ., data = training_data, ntree = 3, mtry = 5, importance = TRUE)
+training_data_w$quality <- as.factor(training_data_w$quality)
+testing_data_w$quality <- as.factor(testing_data_w$quality)
 
-# Predict on the testing data
-predictions <- predict(rf_model, testing_data)
+# Training a Random Forest model
+model_rf_w <- randomForest(quality ~ ., data = training_data_w, ntree = 20)
 
-# Calculate the accuracy
-accuracy_rf <- sum(predictions == testing_data$quality) / nrow(testing_data)
-print(paste("Accuracy of the Random Forest model:", accuracy))
+# Viewing the importance of variables
+importance(model_rf_w)
+varImpPlot(model_rf_w)
+
+# Making predictions on the test data
+predictions_rf_w <- predict(model_rf_w, testing_data_w)
+
+# Actual labels from the test data
+actual_labels_rf_w <- testing_data_w$quality
+
+# Calculate accuracy
+accuracy_rf_w <- mean(predictions_rf_w == actual_labels_rf_w)
+
+# Print the accuracy
+print(paste("Random Forest Model Accuracy:", accuracy_rf_w))
 
 ```
+```{r}
+
+set.seed(123)
+
+training_data_r$quality <- as.factor(training_data_r$quality)
+testing_data_r$quality <- as.factor(testing_data_r$quality)
+
+# Training a Random Forest model
+model_rf_r <- randomForest(quality ~ ., data = training_data_r, ntree = 20)
+
+# Viewing the importance of variables
+importance(model_rf_r)
+varImpPlot(model_rf_r)
+
+# Making predictions on the test data
+predictions_rf_r <- predict(model_rf_r, testing_data_r)
+
+# Actual labels from the test data
+actual_labels_rf_r <- testing_data_r$quality
+
+# Calculate accuracy
+accuracy_rf_r <- mean(predictions_rf_r == actual_labels_rf_r)
+
+# Print the accuracy
+print(paste("Random Forest Model Accuracy:", accuracy_rf_r))
+
+```
+
+
 
 ```{r}
 set.seed(123)
 # Training a Naive Bayes model
-model_nb <- naiveBayes(quality ~ ., data = training_data)
+model_nb_w <- naiveBayes(quality ~ ., data = training_data_w)
 
-model_nb
+model_nb_w
 # Predictions
-predictions_nb <- predict(model_nb, testing_data)
+predictions_nb_w <- predict(model_nb_w, testing_data_w)
 
 
 # Calculating the accuracy
-actual_labels <- testing_data$quality
-accuracy_nb <- mean(predictions_nb == actual_labels)
+actual_labels_w <- testing_data_w$quality
+accuracy_nb_w <- mean(predictions_nb_w == actual_labels_w)
 
 # Printing the accuracy
-print(paste("Naive Bayes Model Accuracy:", accuracy_nb))
+print(paste("Naive Bayes Model Accuracy:", accuracy_nb_w))
+
+```
+
+
+```{r}
+set.seed(123)
+# Training a Naive Bayes model
+model_nb_r <- naiveBayes(quality ~ ., data = training_data_r)
+
+model_nb_r
+# Predictions
+predictions_nb_r <- predict(model_nb_r, testing_data_r)
+
+
+# Calculating the accuracy
+actual_labels_r <- testing_data_r$quality
+accuracy_nb_r <- mean(predictions_nb_r == actual_labels_r)
+
+# Printing the accuracy
+print(paste("Naive Bayes Model Accuracy:", accuracy_nb_r))
+
+```
+
+
+
+```{r}
+
+
+
+set.seed(123)
+
+training_data_w$quality <- as.factor(training_data_w$quality)
+testing_data_w$quality <- as.factor(testing_data_w$quality)
+
+# Fit multinomial logistic regression
+multinom_model_w <- multinom(quality ~ ., data = training_data_w)
+
+# Predict and calculate accuracy
+predictions_multinom_w <- predict(multinom_model_w, testing_data_w)
+accuracy_multinom_w <- mean(predictions_multinom_w == testing_data_w$quality)
+print(paste("Multinomial Logistic Regression Model Accuracy:", accuracy_multinom_w))
+
+```
+```{r}
+set.seed(123)
+
+training_data_r$quality <- as.factor(training_data_r$quality)
+testing_data_r$quality <- as.factor(testing_data_r$quality)
+
+# Fit multinomial logistic regression
+multinom_model_r <- multinom(quality ~ ., data = training_data_r)
+
+# Predict and calculate accuracy
+predictions_multinom_r <- predict(multinom_model_r, testing_data_r)
+accuracy_multinom_r <- mean(predictions_multinom_r == testing_data_r$quality)
+print(paste("Multinomial Logistic Regression Model Accuracy:", accuracy_multinom_r))
 
 ```
 
 ```{r}
-# Convert 'quality' to a factor for multinomial regression
-wine_data$quality <- as.factor(wine_data$quality)
 
-# Split data
 set.seed(123)
-indexes <- createDataPartition(y = wine_data$quality, p = 0.75, list = FALSE)
-training_data <- wine_data[indexes, ]
-testing_data <- wine_data[-indexes, ]
 
-# Fit multinomial logistic regression
-multinom_model <- multinom(quality ~ ., data = training_data)
+recipe_w <- recipe(quality ~ ., data = training_data_w) %>%
+  step_normalize(all_predictors())
 
-# Predict and calculate accuracy
-predictions_multinom <- predict(multinom_model, testing_data)
-accuracy_multinom <- mean(predictions_multinom == testing_data$quality)
-print(paste("Multinomial Logistic Regression Model Accuracy:", accuracy_multinom))
+# Define the model with explicit settings
+xgb_spec_w <- boost_tree(
+  trees = 200,                # Number of trees
+  tree_depth = 17,             # Maximum depth of each tree
+  min_n = 5,                 # Minimum number of observations in nodes
+  loss_reduction = 1.0,       # Minimum loss reduction required for a further partition
+  sample_size = 0.75,         # Subsample ratio of the training instance
+  mtry = 5,                   # Number of variables randomly sampled as candidates at each split
+  learn_rate = 0.05           # Learning rate (shrinkage)
+) %>%
+  set_mode("classification") %>%
+  set_engine("xgboost")
+
+# Create the workflow
+xgb_workflow_w <- workflow() %>%
+  add_model(xgb_spec_w) %>%
+  add_recipe(recipe_w)
+
+# Fit the model
+xgb_fit_w <- fit(xgb_workflow_w, data = training_data_w)
+
+# Assuming xgb_fit is the fitted model workflow from previous steps
+
+class_predictions_w <- predict(xgb_fit_w, new_data = testing_data_w, type = "class")
+
+# Bind the predictions with the true outcomes
+results_w <- bind_cols(testing_data_w, predictions = class_predictions_w$.pred_class)
+
+# Calculate accuracy
+model_accuracy_w <- accuracy(results_w, truth = quality, estimate = predictions)
+
+# Print the accuracy
+print(model_accuracy_w)
 
 ```
+
 
 ```{r}
 # Load the data
@@ -192,4 +337,8 @@ model_accuracy <- accuracy(results, truth = quality, estimate = predictions)
 
 # Print the accuracy
 print(model_accuracy)
+
+
+
+
 ```

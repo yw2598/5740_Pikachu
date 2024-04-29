@@ -1,0 +1,253 @@
+---
+title: "XgBoost"
+format: html
+editor: visual
+---
+
+```{r}
+library(parsnip)
+library(recipes)
+library(dials)  # For tuning parameter objects
+library(workflows)  # For creating workflows
+library(rsample)  # For resampling if needed
+library(yardstick)  # For model metrics
+library(xgboost)
+
+# Load the data
+wine_data_2 <- read.csv("wine-quality-white-and-red.csv")
+
+wine_red <- wine_data_2[wine_data_2$type == "red",]
+
+wine_red <- wine_red |>
+  select(-type)
+# Set the seed for reproducibility
+set.seed(123)
+
+# Split the data into training and testing sets with a 75:25 ratio
+data_split <- initial_split(wine_red, prop = 0.75)
+
+# Extract the training and testing data
+train_data <- training(data_split)
+test_data <- testing(data_split)
+
+
+train_data$quality <- as.factor(train_data$quality)
+test_data$quality <- as.factor(test_data$quality)
+
+# Setup the recipe
+
+recipe <- recipe(quality ~ ., data = train_data) %>%
+  step_normalize(all_predictors())
+
+# Define the model with explicit settings
+xgb_spec <- boost_tree(
+  trees = 100,                # Number of trees
+  tree_depth = 16,             # Maximum depth of each tree
+  min_n = 10,                 # Minimum number of observations in nodes
+  loss_reduction = 1.0,       # Minimum loss reduction required for a further partition
+  sample_size = 0.75,         # Subsample ratio of the training instance
+  mtry = 3,                   # Number of variables randomly sampled as candidates at each split
+  learn_rate = 0.06           # Learning rate (shrinkage)
+) %>%
+  set_mode("classification") %>%
+  set_engine("xgboost")
+
+# Create the workflow
+xgb_workflow <- workflow() %>%
+  add_model(xgb_spec) %>%
+  add_recipe(recipe)
+
+# Fit the model
+xgb_fit <- fit(xgb_workflow, data = train_data)
+
+# Assuming xgb_fit is the fitted model workflow from previous steps
+
+class_predictions <- predict(xgb_fit, new_data = test_data, type = "class")
+
+# Bind the predictions with the true outcomes
+results <- bind_cols(test_data, predictions = class_predictions$.pred_class)
+
+# Calculate accuracy
+model_accuracy <- accuracy(results, truth = quality, estimate = predictions)
+
+# Print the accuracy
+print(model_accuracy)
+
+
+# Predictions with probabilities
+prob_predictions <- predict(xgb_fit, new_data = test_data, type = "prob")
+
+# Install and load the pROC package
+if (!requireNamespace("pROC", quietly = TRUE)) {
+  install.packages("pROC")
+}
+library(pROC)
+
+library(pROC)
+
+
+
+# Calculate the ROC AUC for each class using a one-vs-all approach
+class_levels <- levels(test_data$quality)  # Get the levels of the factor variable 'type'
+auc_results <- setNames(numeric(length(class_levels)), class_levels)
+
+for (class in class_levels) {
+  # Create a binary response: 1 for the current class, 0 for all others
+  binary_response <- ifelse(test_data$quality == class, "positive", "negative")
+
+  # Get the predictor probabilities for the current class
+  predictor <- prob_predictions[[paste0(".pred_", class)]]
+
+  # Calculate ROC curve
+  roc_curve <- roc(response = binary_response, predictor = predictor, levels = c("negative", "positive"))
+  
+  # Calculate AUC and store it
+  auc_results[class] <- auc(roc_curve)
+}
+
+# Print the AUC results for each class
+print(auc_results)
+
+
+library(pROC)
+
+# Assuming prob_predictions and test_data are already defined and loaded correctly
+
+# Calculate the ROC AUC for each class using a one-vs-all approach
+class_levels <- levels(test_data$quality)  # Get the levels of the factor variable 'type'
+auc_results <- setNames(numeric(length(class_levels)), class_levels)
+
+for (class in class_levels) {
+  # Create a binary response: 1 for the current class, 0 for all others
+  binary_response <- ifelse(test_data$quality == class, "positive", "negative")
+
+  # Get the predictor probabilities for the current class
+  predictor <- prob_predictions[[paste0(".pred_", class)]]
+
+  # Calculate ROC curve
+  roc_curve <- roc(response = binary_response, predictor = predictor, levels = c("negative", "positive"))
+  
+  # Calculate AUC and store it
+  auc_results[class] <- auc(roc_curve)
+}
+
+# Calculate the macro-average AUC
+macro_average_auc <- mean(auc_results)
+
+# Print the AUC results for each class and the macro-average AUC
+print(paste("Macro-average AUC:", macro_average_auc))
+
+
+# Load necessary libraries
+if (!requireNamespace("pROC", quietly = TRUE)) {
+  install.packages("pROC")
+}
+library(pROC)
+library(ggplot2)
+
+# Assuming prob_predictions and test_data are already defined and loaded correctly
+
+# Calculate the ROC AUC for each class using a one-vs-all approach
+class_levels <- levels(test_data$quality)
+auc_results <- setNames(numeric(length(class_levels)), class_levels)
+
+# Plot setup for multiple ROC curves
+plot_layout <- ggplot() +
+  labs(x = "False Positive Rate", y = "True Positive Rate") +
+  ggtitle("ROC Curves by Class") +
+  theme_minimal()
+
+for (class in class_levels) {
+  # Create a binary response: 1 for the current class, 0 for all others
+  binary_response <- ifelse(test_data$quality == class, "positive", "negative")
+
+  # Get the predictor probabilities for the current class
+  predictor <- prob_predictions[[paste0(".pred_", class)]]
+
+  # Calculate ROC curve
+  roc_curve <- roc(response = binary_response, predictor = predictor, levels = c("negative", "positive"), direction = "<")
+  
+  # Calculate AUC and store it
+  auc_results[class] <- auc(roc_curve)
+  
+  # Extract the data from the roc object for plotting
+  roc_data <- data.frame(
+    Specificities = 1 - roc_curve$specificities,
+    Sensitivities = roc_curve$sensitivities,
+    Class = class
+  )
+  
+  # Add ROC curve to the plot
+  plot_layout <- plot_layout +
+    geom_line(data = roc_data, aes(x = Specificities, y = Sensitivities, color = Class), inherit.aes = FALSE)
+}
+
+# Finalize the plot with legend and colors
+plot_layout <- plot_layout +
+  scale_color_viridis_d(begin = 0.1, end = 0.9, name = "Class") +
+  geom_abline(linetype = "dashed", color = "gray")
+
+# Print the plot
+print(plot_layout)
+
+# Print the AUC results for each class and the macro-average AUC
+macro_average_auc <- mean(auc_results)
+print(auc_results)
+print(paste("Macro-average AUC:", macro_average_auc))
+
+```
+
+```{r}
+library(tidyverse)
+library(parsnip)
+library(recipes)
+library(yardstick)
+library(glmnet)
+library(rsample)
+library(workflows)
+library(tune)  
+
+set.seed(123)
+
+# Setup the recipe
+recipe <- recipe(quality ~ ., data = train_data) %>%
+  step_normalize(all_predictors())
+
+# Define the Lasso model
+lasso_spec <- logistic_reg(penalty = tune(), mixture = 1) %>% 
+  set_engine("glmnet")
+
+# Create the workflow
+lasso_workflow <- workflow() %>%
+  add_recipe(recipe) %>%
+  add_model(lasso_spec)
+
+# To choose a suitable penalty, typically cross-validation is used
+set.seed(234)  # for reproducibility in cross-validation
+cv_splits <- vfold_cv(train_data, v = 5)
+grid_vals <- grid_regular(penalty(range = c(-5, -1)), levels = 50)
+
+lasso_tuned <- tune_grid(
+  lasso_workflow,
+  resamples = cv_splits,
+  grid = grid_vals
+)
+
+best_penalty <- select_best(lasso_tuned, "roc_auc")
+
+# Update the model specification with the best penalty
+lasso_spec <- lasso_spec %>% finalize_parameters(best_penalty)
+
+# Fit the final model
+final_fit <- fit(lasso_workflow, data = train_data)
+
+# Predict on test data
+predictions <- predict(final_fit, test_data, type = "prob")
+
+# Evaluate model performance
+results <- bind_cols(test_data, predictions)
+roc_results <- roc_auc(results, truth = quality, .pred_positive)
+
+print(roc_results)
+
+```
