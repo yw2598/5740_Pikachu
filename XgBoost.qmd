@@ -16,7 +16,7 @@ library(xgboost)
 # Load the data
 wine_data_2 <- read.csv("wine-quality-white-and-red.csv")
 
-wine_red <- wine_data_2[wine_data_2$type == "white",]
+wine_red <- wine_data_2[wine_data_2$type == "red",]
 
 wine_red <- wine_red |>
   select(-type)
@@ -79,7 +79,7 @@ if (!requireNamespace("pROC", quietly = TRUE)) {
 }
 library(pROC)
 
-library(pROC)
+
 
 
 
@@ -191,6 +191,8 @@ macro_average_auc <- mean(auc_results)
 print(auc_results)
 print(paste("Macro-average AUC:", macro_average_auc))
 
+
+print(xgb_fit)
 ```
 
 ```{}

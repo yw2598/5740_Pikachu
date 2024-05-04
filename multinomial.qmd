@@ -1,0 +1,164 @@
+---
+title: "Multinomial Regression"
+format: html
+editor: visual
+---
+
+```{r}
+
+library(parsnip)
+library(recipes)
+library(dials)  # For tuning parameter objects
+library(workflows)  # For creating workflows
+library(rsample)  # For resampling if needed
+library(yardstick)  # For model metrics
+library(parsnip)
+library(rsample)
+library(dplyr)
+library(caret)     # For machine learning algorithms
+library(nnet)          # For multilayer perceptron
+
+
+
+
+wine_data <- read.csv("wine-quality-white-and-red.csv")
+# Assuming the column that indicates the wine type is named 'type'
+categorize_quality <- function(quality) {
+  case_when(
+    quality %in% 3:4 ~ "poor",
+    quality %in% 5:6 ~ "fair",
+    TRUE ~ "good"
+  )
+}
+
+
+red_wine <- wine_data[wine_data$type == "red", ] |>
+  select(-type) |>
+  mutate(quality = categorize_quality(quality))
+
+white_wine <- wine_data[wine_data$type == "white", ] |>
+  select(-type)|>
+  mutate(quality = categorize_quality(quality))
+
+normalize_min_max <- function(x) {
+  return ((x - min(x)) / (max(x) - min(x)))
+}
+# Excluding the first and the last column
+red_feature_columns <- names(red_wine)[2:(ncol(red_wine) - 1)]
+
+white_feature_columns <-  names(white_wine)[2:(ncol(white_wine) - 1)]
+
+# Apply Min-Max Scaling
+# Apply min-max scaling to red wine features
+red_wine[red_feature_columns] <- lapply(red_wine[red_feature_columns], normalize_min_max)
+
+# Apply min-max scaling to white wine features
+white_wine[white_feature_columns] <- lapply(white_wine[white_feature_columns], normalize_min_max)
+
+# Split data into training and testing sets
+set.seed(123)
+training_index <- createDataPartition(white_wine$quality, p=0.75, list= FALSE)
+training_data_w <- white_wine[training_index, ]
+testing_data_w <- white_wine[-training_index, ]
+
+training_index <- createDataPartition(red_wine$quality, p=0.75, list= FALSE)
+training_data_r <- red_wine[training_index, ]
+testing_data_r <- red_wine[-training_index, ]
+```
+
+```{r}
+# Prepare the predictor matrix for training data
+
+
+set.seed(123)
+
+training_data_w$quality <- as.factor(training_data_w$quality)
+testing_data_w$quality <- as.factor(testing_data_w$quality)
+
+# Fit multinomial logistic regression
+multinom_model_w <- multinom(quality ~ ., data = training_data_w)
+
+# Predict and calculate accuracy
+predictions_multinom_w <- predict(multinom_model_w, testing_data_w)
+accuracy_multinom_w <- mean(predictions_multinom_w == testing_data_w$quality)
+print(paste("Multinomial Logistic Regression Model Accuracy:", accuracy_multinom_w))
+
+
+library(glmnet)
+
+# Prepare the predictor matrix for training data
+predictors <- model.matrix(quality ~ ., data = training_data_w)[,-1]  # remove intercept
+response <- training_data_w$quality
+
+# Fit the Lasso model using cross-validation
+set.seed(123)  # for reproducibility
+cv_lasso_model <- cv.glmnet(predictors, response, family = "multinomial", type.measure = "class")
+
+# Prepare the testing data using the same model matrix terms used in training
+test_predictors <- model.matrix(quality ~ ., data = testing_data_w, model = terms(cv_lasso_model$glmnet.fit))[,-1]
+
+# Predict using the best model
+predicted_values <- predict(cv_lasso_model, s = "lambda.min", newx = test_predictors, type = "class")
+
+# Get the selected variables and their coefficients
+selected_variables <- coef(cv_lasso_model, s = "lambda.min")
+print("Selected Variables and Coefficients:")
+print(selected_variables)
+
+# Calculate accuracy
+accuracy_lasso <- mean(predicted_values == testing_data_w$quality)
+print(paste("Lasso Regression Model Accuracy:", accuracy_lasso))
+
+# Plot the cross-validated error as a function of lambda
+plot(cv_lasso_model)
+
+
+
+
+
+```
+
+```{r}
+
+set.seed(123)
+
+training_data_r$quality <- as.factor(training_data_r$quality)
+testing_data_r$quality <- as.factor(testing_data_r$quality)
+
+# Fit multinomial logistic regression
+multinom_model_r <- multinom(quality ~ ., data = training_data_r)
+
+# Predict and calculate accuracy
+predictions_multinom_r <- predict(multinom_model_r, testing_data_r)
+accuracy_multinom_r <- mean(predictions_multinom_r == testing_data_r$quality)
+print(paste("Multinomial Logistic Regression Model Accuracy:", accuracy_multinom_r))
+
+library(glmnet)
+
+# Prepare the predictor matrix for training data
+predictors_r <- model.matrix(quality ~ ., data = training_data_r)[,-1]  # remove intercept
+response_r <- training_data_r$quality
+
+# Fit the Lasso model using cross-validation
+set.seed(123)  # for reproducibility
+cv_lasso_model_r <- cv.glmnet(predictors_r, response_r, family = "multinomial", type.measure = "class")
+
+# Prepare the testing data using the same model matrix terms used in training
+test_predictors_r <- model.matrix(quality ~ ., data = testing_data_r, model = terms(cv_lasso_model_r$glmnet.fit))[,-1]
+
+# Predict using the best model
+predicted_values_r <- predict(cv_lasso_model_r, s = "lambda.min", newx = test_predictors_r, type = "class")
+
+# Get the selected variables and their coefficients
+selected_variables_r <- coef(cv_lasso_model_r, s = "lambda.min")
+print("Selected Variables and Coefficients:")
+print(selected_variables_r)
+
+# Calculate accuracy
+accuracy_lasso_r <- mean(predicted_values_r == testing_data_r$quality)
+print(paste("Lasso Regression Model Accuracy:", accuracy_lasso_r))
+
+# Plot the cross-validated error as a function of lambda
+plot(cv_lasso_model_r)
+
+```

@@ -22,6 +22,12 @@ red_wine <- wine_data[wine_data$type == "red", ] |>
   select(-type)
 white_wine <- wine_data[wine_data$type == "white", ] |>
   select(-type)
+summary_red <- summary(red_wine)
+summary_white <-summary(white_wine)
+
+
+summary_red 
+summary_white
 
 normalize_min_max <- function(x) {
   return ((x - min(x)) / (max(x) - min(x)))
