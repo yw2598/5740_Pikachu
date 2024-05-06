@@ -16,7 +16,7 @@ library(parsnip)
 library(rsample)
 
 wine_data <- read.csv("wine-quality-white-and-red.csv")
-# Assuming the column that indicates the wine type is named 'type'
+
 
 red_wine <- wine_data[wine_data$type == "red", ] |>
   select(-type)

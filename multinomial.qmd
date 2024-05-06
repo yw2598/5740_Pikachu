@@ -22,7 +22,7 @@ library(nnet)          # For multilayer perceptron
 
 
 wine_data <- read.csv("wine-quality-white-and-red.csv")
-# Assuming the column that indicates the wine type is named 'type'
+
 categorize_quality <- function(quality) {
   case_when(
     quality %in% 3:4 ~ "poor",

@@ -141,7 +141,7 @@ if (!requireNamespace("pROC", quietly = TRUE)) {
 library(pROC)
 library(ggplot2)
 
-# Assuming prob_predictions and test_data are already defined and loaded correctly
+
 
 # Calculate the ROC AUC for each class using a one-vs-all approach
 class_levels <- levels(test_data$quality)
